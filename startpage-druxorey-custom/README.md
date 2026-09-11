@@ -16,8 +16,20 @@ Version personnalisée inspirée de `druxorey/startpage` (GPL-3.0), conservant s
 - Raccourcis réordonnables par glisser-déposer.
 - Ajout, suppression, modification et catégorisation des raccourcis depuis les paramètres.
 - Configuration sauvegardée dans `localStorage` du navigateur.
+- Installable comme extension Chrome/Chromium (nouvel onglet), sans serveur.
 
-## Démarrage immédiat
+## Extension Chrome (sans serveur)
+
+Le dossier `dist/` est aussi une extension Chrome/Chromium valide (Manifest V3) qui remplace la page de nouvel onglet — plus besoin d'héberger quoi que ce soit.
+
+1. `npm install && npm run build` (ou récupère directement le dossier `dist/` déjà buildé).
+2. Ouvre `chrome://extensions`, active le **Mode développeur** (en haut à droite).
+3. Clique sur **Charger l'extension non empaquetée** et sélectionne le dossier `dist/`.
+4. Ouvre un nouvel onglet : c'est ta startpage.
+
+Tout fonctionne en local (thèmes, disposition, raccourcis, image portrait) via `localStorage` du navigateur. Seule différence par rapport au mode serveur : l'IP locale n'a plus d'endpoint `/api/client-ip` à interroger, donc elle repose uniquement sur la détection WebRTC (le module affiche « non exposée » si le navigateur la bloque). Pense à relancer `npm run build` puis à cliquer sur l'icône ↻ dans `chrome://extensions` après une modification du code.
+
+## Démarrage immédiat (mode serveur)
 
 Le ZIP contient déjà un dossier `dist/` prêt à servir. Avec Node.js 18+ :
 
