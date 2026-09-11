@@ -1,4 +1,4 @@
-import { DEFAULT_MODULE_ORDER, DEFAULT_SHORTCUTS, MODULES, Shortcut } from '../config';
+import { DEFAULT_MODULE_LAYOUT, DEFAULT_SHORTCUTS, MODULES, ModuleLayout, Shortcut } from '../config';
 
 type SearchEngine = 'google' | 'duckduckgo' | 'brave';
 type Preferences = {
@@ -6,7 +6,8 @@ type Preferences = {
   preferredDark: string;
   preferredLight: string;
   hiddenModules: string[];
-  moduleOrder: string[];
+  moduleLayout: Record<string, ModuleLayout>;
+  layoutComputed: boolean;
 };
 
 const STORAGE_PREFS = 'custom_startpage_preferences_v1';
@@ -23,28 +24,40 @@ const defaults: Preferences = {
   preferredDark: 'dracula',
   preferredLight: 'alucard',
   hiddenModules: [],
-  moduleOrder: [...DEFAULT_MODULE_ORDER]
+  moduleLayout: structuredClone(DEFAULT_MODULE_LAYOUT),
+  layoutComputed: false
 };
+
+const MOBILE_QUERY = window.matchMedia('(max-width:850px)');
+const MODULE_MIN_WIDTH = 260;
+const MODULE_MIN_HEIGHT = 120;
 
 let prefs = loadPrefs();
 let shortcuts = loadShortcuts();
 let editingLayout = false;
+
+function isMobileLayout(): boolean { return MOBILE_QUERY.matches; }
+function clamp(value: number, min: number, max: number): number { return Math.min(Math.max(value, min), Math.max(min, max)); }
 
 function loadPrefs(): Preferences {
   try {
     const raw = localStorage.getItem(STORAGE_PREFS);
     if (!raw) return structuredClone(defaults);
     const saved = JSON.parse(raw) as Partial<Preferences>;
-    const savedOrder = Array.isArray(saved.moduleOrder) ? saved.moduleOrder : [];
-    const known = new Set(DEFAULT_MODULE_ORDER);
-    const cleanedOrder = savedOrder.filter(id => known.has(id as typeof DEFAULT_MODULE_ORDER[number]));
-    DEFAULT_MODULE_ORDER.forEach(id => { if (!cleanedOrder.includes(id)) cleanedOrder.push(id); });
+    const mergedLayout: Record<string, ModuleLayout> = {};
+    Object.keys(DEFAULT_MODULE_LAYOUT).forEach(id => {
+      const savedLayout = saved.moduleLayout?.[id];
+      mergedLayout[id] = savedLayout && typeof savedLayout.xFrac === 'number'
+        ? { ...DEFAULT_MODULE_LAYOUT[id], ...savedLayout }
+        : structuredClone(DEFAULT_MODULE_LAYOUT[id]);
+    });
     return {
       ...defaults,
       ...saved,
       searchEngine: saved.searchEngine && SEARCH_ENGINES[saved.searchEngine] ? saved.searchEngine : defaults.searchEngine,
       hiddenModules: Array.isArray(saved.hiddenModules) ? saved.hiddenModules : [],
-      moduleOrder: cleanedOrder
+      moduleLayout: mergedLayout,
+      layoutComputed: saved.layoutComputed === true
     };
   } catch { return structuredClone(defaults); }
 }
@@ -255,37 +268,142 @@ function bindShortcutDrag(el: HTMLElement): void {
   });
 }
 
-function applyModuleLayout(): void {
-  const dashboard = document.getElementById('dashboard'); if (!dashboard) return;
-  const byId = new Map<string, HTMLElement>();
-  dashboard.querySelectorAll<HTMLElement>('.module').forEach(module => byId.set(module.dataset.module || '', module));
-  prefs.moduleOrder.forEach(id => { const module = byId.get(id); if (module) dashboard.appendChild(module); });
+function layoutFor(id: string): ModuleLayout {
+  return prefs.moduleLayout[id] || DEFAULT_MODULE_LAYOUT[id] || { xFrac: 0, wFrac: 1, y: 0, h: null };
+}
+
+/** Empile les modules dans l'ordre du DOM et mesure leur hauteur réelle pour poser des positions par défaut sans chevauchement. */
+function computeStackedLayout(): Record<string, ModuleLayout> {
+  const dashboard = document.getElementById('dashboard');
+  const layout: Record<string, ModuleLayout> = structuredClone(DEFAULT_MODULE_LAYOUT);
+  if (!dashboard) return layout;
+  const GAP = 14;
+  let cursorY = 0;
   dashboard.querySelectorAll<HTMLElement>('.module').forEach(module => {
     const id = module.dataset.module || '';
+    if (id === 'portrait') return; // position/taille fixes par défaut, ne participe pas à l'empilement
+    const base = layout[id] || { xFrac: 0, wFrac: 1, y: 0, h: null };
+    if (prefs.hiddenModules.includes(id)) { layout[id] = { ...base, y: cursorY, h: null }; return; }
+    module.style.position = 'static';
+    module.style.width = (base.wFrac * 100) + '%';
+    module.style.height = 'auto';
+    const height = module.offsetHeight;
+    layout[id] = { ...base, y: cursorY, h: null };
+    cursorY += height + GAP;
+  });
+  return layout;
+}
+
+function applyModuleLayout(): void {
+  const dashboard = document.getElementById('dashboard'); if (!dashboard) return;
+  const modules = dashboard.querySelectorAll<HTMLElement>('.module');
+  const mobile = isMobileLayout();
+  modules.forEach(module => {
+    const id = module.dataset.module || '';
     module.classList.toggle('hidden-module', prefs.hiddenModules.includes(id));
-    module.draggable = editingLayout;
+    if (mobile) { module.style.cssText = ''; return; }
+    const layout = layoutFor(id);
+    module.style.position = 'absolute';
+    module.style.left = (layout.xFrac * 100) + '%';
+    module.style.width = (layout.wFrac * 100) + '%';
+    module.style.top = layout.y + 'px';
+    if (layout.h != null) { module.style.height = layout.h + 'px'; module.classList.add('has-fixed-height'); }
+    else { module.style.height = 'auto'; module.classList.remove('has-fixed-height'); }
+  });
+  if (mobile) { dashboard.style.removeProperty('min-height'); return; }
+  let maxBottom = 0;
+  modules.forEach(module => {
+    if (module.classList.contains('hidden-module')) return;
+    maxBottom = Math.max(maxBottom, module.offsetTop + module.offsetHeight);
+  });
+  dashboard.style.minHeight = (maxBottom + 8) + 'px';
+}
+
+function persistModuleLayout(id: string, patch: Partial<ModuleLayout>): void {
+  prefs.moduleLayout[id] = { ...layoutFor(id), ...patch };
+  savePrefs();
+}
+
+function bindModuleMove(module: HTMLElement): void {
+  const handle = module.querySelector<HTMLElement>('.drag-handle');
+  const dashboard = document.getElementById('dashboard');
+  if (!handle || !dashboard) return;
+  handle.addEventListener('pointerdown', event => {
+    if (!editingLayout || isMobileLayout()) return;
+    event.preventDefault();
+    const id = module.dataset.module || '';
+    const layout = layoutFor(id);
+    const cw = dashboard.clientWidth || 1;
+    const startX = event.clientX; const startY = event.clientY;
+    const startLeft = layout.xFrac * cw; const startTop = layout.y;
+    const widthPx = layout.wFrac * cw;
+    let pendingLeft = startLeft; let pendingTop = startTop;
+    module.classList.add('dragging');
+    handle.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent) => {
+      pendingLeft = clamp(startLeft + (e.clientX - startX), 0, Math.max(0, cw - widthPx));
+      pendingTop = Math.max(0, startTop + (e.clientY - startY));
+      module.style.left = pendingLeft + 'px';
+      module.style.top = pendingTop + 'px';
+    };
+    const onUp = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      module.classList.remove('dragging');
+      persistModuleLayout(id, { xFrac: pendingLeft / cw, y: pendingTop });
+      applyModuleLayout();
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp, { once: true });
   });
 }
 
-function initModuleDrag(): void {
-  document.querySelectorAll<HTMLElement>('.module').forEach(module => {
-    module.addEventListener('dragstart', event => {
-      if (!editingLayout) { event.preventDefault(); return; }
-      module.classList.add('dragging'); event.dataTransfer?.setData('text/module', module.dataset.module || '');
-    });
-    module.addEventListener('dragend', () => module.classList.remove('dragging'));
-    module.addEventListener('dragover', event => { if (editingLayout) { event.preventDefault(); module.classList.add('drag-over'); } });
-    module.addEventListener('dragleave', () => module.classList.remove('drag-over'));
-    module.addEventListener('drop', event => {
-      if (!editingLayout) return;
-      event.preventDefault(); module.classList.remove('drag-over');
-      const fromId = event.dataTransfer?.getData('text/module'); const toId = module.dataset.module;
-      if (!fromId || !toId || fromId === toId) return;
-      const fromIndex = prefs.moduleOrder.indexOf(fromId); const toIndex = prefs.moduleOrder.indexOf(toId);
-      if (fromIndex < 0 || toIndex < 0) return;
-      prefs.moduleOrder.splice(fromIndex, 1); prefs.moduleOrder.splice(toIndex, 0, fromId); savePrefs(); applyModuleLayout();
-    });
+function bindModuleResize(module: HTMLElement): void {
+  const handle = module.querySelector<HTMLElement>('.resize-handle');
+  const dashboard = document.getElementById('dashboard');
+  if (!handle || !dashboard) return;
+  handle.addEventListener('pointerdown', event => {
+    if (!editingLayout || isMobileLayout()) return;
+    event.preventDefault(); event.stopPropagation();
+    const id = module.dataset.module || '';
+    const layout = layoutFor(id);
+    const cw = dashboard.clientWidth || 1;
+    const startX = event.clientX; const startY = event.clientY;
+    const startWidth = layout.wFrac * cw; const startHeight = module.offsetHeight;
+    const leftPx = layout.xFrac * cw;
+    let pendingWidth = startWidth; let pendingHeight = startHeight;
+    module.classList.add('resizing');
+    handle.setPointerCapture(event.pointerId);
+    const onMove = (e: PointerEvent) => {
+      pendingWidth = clamp(startWidth + (e.clientX - startX), MODULE_MIN_WIDTH, Math.max(MODULE_MIN_WIDTH, cw - leftPx));
+      pendingHeight = clamp(startHeight + (e.clientY - startY), MODULE_MIN_HEIGHT, 2000);
+      module.style.width = pendingWidth + 'px';
+      module.style.height = pendingHeight + 'px';
+    };
+    const onUp = () => {
+      handle.releasePointerCapture(event.pointerId);
+      handle.removeEventListener('pointermove', onMove);
+      module.classList.remove('resizing');
+      persistModuleLayout(id, { wFrac: pendingWidth / cw, h: Math.round(pendingHeight) });
+      applyModuleLayout();
+    };
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp, { once: true });
   });
+}
+
+function ensureLayoutComputed(): void {
+  if (prefs.layoutComputed || isMobileLayout()) return;
+  prefs.moduleLayout = computeStackedLayout();
+  prefs.layoutComputed = true;
+  savePrefs();
+}
+
+function initModuleLayoutControls(): void {
+  document.querySelectorAll<HTMLElement>('.module').forEach(module => { bindModuleMove(module); bindModuleResize(module); });
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => { window.clearTimeout(resizeTimer); resizeTimer = window.setTimeout(applyModuleLayout, 120); });
+  MOBILE_QUERY.addEventListener('change', () => { ensureLayoutComputed(); applyModuleLayout(); });
 }
 
 function setEditMode(enabled: boolean): void {
@@ -293,7 +411,7 @@ function setEditMode(enabled: boolean): void {
   document.body.classList.toggle('layout-edit', enabled);
   const btn = document.getElementById('layout-toggle'); if (btn) btn.textContent = enabled ? 'terminer' : 'modifier';
   applyModuleLayout(); renderShortcuts();
-  if (enabled) showToast('Glisse les blocs ou raccourcis pour les déplacer');
+  if (enabled) showToast('⠿ pour déplacer un bloc, coin ↘ pour le redimensionner');
 }
 
 function renderModuleToggles(): void {
@@ -339,14 +457,16 @@ function initSettings(): void {
   dark.addEventListener('change', () => { prefs.preferredDark = dark.value; savePrefs(); applyTheme(); });
   light.addEventListener('change', () => { prefs.preferredLight = light.value; savePrefs(); applyTheme(); });
   document.getElementById('layout-toggle')?.addEventListener('click', () => setEditMode(!editingLayout));
-  document.getElementById('reset-layout')?.addEventListener('click', () => { prefs.moduleOrder = [...DEFAULT_MODULE_ORDER]; prefs.hiddenModules = []; savePrefs(); applyModuleLayout(); renderModuleToggles(); showToast('Disposition réinitialisée'); });
+  document.getElementById('reset-layout')?.addEventListener('click', () => { prefs.hiddenModules = []; prefs.moduleLayout = computeStackedLayout(); prefs.layoutComputed = true; savePrefs(); applyModuleLayout(); renderModuleToggles(); showToast('Disposition réinitialisée'); });
   document.getElementById('reset-shortcuts')?.addEventListener('click', () => { shortcuts = structuredClone(DEFAULT_SHORTCUTS); saveShortcuts(); renderShortcuts(); renderShortcutEditor(); showToast('Raccourcis rétablis'); });
   document.getElementById('add-shortcut')?.addEventListener('click', () => { shortcuts.push({ id: crypto.randomUUID(), name: 'Nouveau', url: 'https://', category: 'Autres' }); saveShortcuts(); renderShortcuts(); renderShortcutEditor(); });
 }
 
 function init(): void {
   applyTheme(); window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
-  initClock(); initSearch(); renderShortcuts(); applyModuleLayout(); initModuleDrag(); initSettings();
+  initClock(); initSearch(); renderShortcuts();
+  ensureLayoutComputed();
+  applyModuleLayout(); initModuleLayoutControls(); initSettings();
   document.getElementById('refresh-ips')?.addEventListener('click', () => { void fetchPublicIp(); void fetchLocalIp(); });
   void fetchPublicIp(); void fetchLocalIp();
 }
