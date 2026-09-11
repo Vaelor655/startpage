@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="fr" data-theme="dracula">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Startpage</title>
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand"><span class="brand-dot"></span><span>~/startpage</span></div>
+      <div class="top-actions">
+        <button class="ghost-btn" id="layout-toggle" type="button">modifier</button>
+        <button class="icon-btn" id="settings-toggle" type="button" aria-label="Paramètres">⚙</button>
+      </div>
+    </header>
+
+    <main class="dashboard" id="dashboard">
+      <section class="module" draggable="false" data-module="clock">
+        <div class="module-head"><div class="module-title">temps</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <div class="clock-wrap">
+          <div class="clock-time"><span id="clock-hours">--:--</span><span class="clock-seconds" id="clock-seconds">:--</span></div>
+          <div class="clock-date"><div class="clock-day" id="clock-day">---</div><div id="clock-date">-- --- ----</div></div>
+        </div>
+      </section>
+
+      <section class="module" draggable="false" data-module="search">
+        <div class="module-head"><div class="module-title">recherche</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <form class="search-wrap" id="search-form">
+          <div class="search-row">
+            <span class="search-symbol">›</span>
+            <input class="search-input" id="search-input" type="text" autocomplete="off" autofocus />
+            <span class="search-engine-pill" id="search-engine-label">Google</span>
+          </div>
+          <div class="search-help">Alt + Espace pour rechercher · tape une URL complète pour l’ouvrir directement</div>
+        </form>
+      </section>
+
+      <section class="module" draggable="false" data-module="network">
+        <div class="module-head"><div class="module-title">réseau</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <div class="network-grid">
+          <div class="ip-card"><div class="ip-label">IP publique</div><div class="ip-value" id="public-ip">chargement…</div><div class="ip-status" id="public-ip-status">api.ipify.org</div></div>
+          <div class="ip-card"><div class="ip-label">IP locale (ce poste)</div><div class="ip-value" id="local-ip">détection…</div><div class="ip-status" id="local-ip-status">serveur local / WebRTC</div></div>
+        </div>
+        <div style="margin-top:11px"><button type="button" class="ip-refresh" id="refresh-ips">↻ actualiser</button></div>
+      </section>
+
+      <section class="module" draggable="false" data-module="shortcuts">
+        <div class="module-head"><div class="module-title">raccourcis</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <div class="categories" id="shortcut-categories"></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="config-modal" id="settings-modal">
+    <div class="modal-head"><h2>Préférences</h2><button class="icon-btn" id="settings-close" type="button">×</button></div>
+    <div class="modal-body">
+      <section class="settings-section">
+        <h3>Recherche</h3>
+        <div class="field-grid"><div class="field"><label for="search-engine-select">Moteur par défaut</label><select id="search-engine-select"><option value="google">Google</option><option value="duckduckgo">DuckDuckGo</option><option value="brave">Brave Search</option></select></div></div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Thèmes</h3>
+        <div class="field-grid">
+          <div class="field"><label for="dark-theme-select">Thème sombre</label><select id="dark-theme-select"><option value="dracula">Dracula</option><option value="catppuccin-mocha">Catppuccin Mocha</option><option value="gruvbox-dark">Gruvbox Dark</option><option value="nord-dark">Nord Dark</option><option value="evergreen-dark">Evergreen Dark</option><option value="tokyonight-dark">Tokyo Night Dark</option><option value="onedark">One Dark</option><option value="rosepine-dark">Rosé Pine Dark</option><option value="ayu-dark">Ayu Dark</option></select></div>
+          <div class="field"><label for="light-theme-select">Thème clair</label><select id="light-theme-select"><option value="alucard">Alucard</option><option value="catppuccin-latte">Catppuccin Latte</option><option value="gruvbox-light">Gruvbox Light</option><option value="nord-light">Nord Light</option><option value="evergreen-light">Evergreen Light</option><option value="tokyonight-light">Tokyo Night Light</option><option value="onelight">One Light</option><option value="rosepine-light">Rosé Pine Light</option><option value="ayu-light">Ayu Light</option></select></div>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Modules</h3>
+        <div class="module-toggles" id="module-toggles"></div>
+        <div class="actions-row"><button class="ghost-btn" type="button" id="reset-layout">Réinitialiser la disposition</button></div>
+      </section>
+
+      <section class="settings-section">
+        <h3>Raccourcis</h3>
+        <div class="shortcut-editor" id="shortcut-editor"></div>
+        <div class="actions-row"><button class="ghost-btn" type="button" id="add-shortcut">+ Ajouter</button><button class="ghost-btn" type="button" id="reset-shortcuts">Rétablir les raccourcis</button></div>
+      </section>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="/src/ts/main.ts"></script>
+</body>
+</html>
