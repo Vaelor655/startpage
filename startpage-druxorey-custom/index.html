@@ -18,38 +18,50 @@
     </header>
 
     <main class="dashboard" id="dashboard">
-      <section class="module" draggable="false" data-module="clock">
+      <section class="module" data-module="clock">
         <div class="module-head"><div class="module-title">temps</div><div class="drag-handle" title="Déplacer">⠿</div></div>
-        <div class="clock-wrap">
-          <div class="clock-time"><span id="clock-hours">--:--</span><span class="clock-seconds" id="clock-seconds">:--</span></div>
-          <div class="clock-date"><div class="clock-day" id="clock-day">---</div><div id="clock-date">-- --- ----</div></div>
-        </div>
-      </section>
-
-      <section class="module" draggable="false" data-module="search">
-        <div class="module-head"><div class="module-title">recherche</div><div class="drag-handle" title="Déplacer">⠿</div></div>
-        <form class="search-wrap" id="search-form">
-          <div class="search-row">
-            <span class="search-symbol">›</span>
-            <input class="search-input" id="search-input" type="text" autocomplete="off" autofocus />
-            <span class="search-engine-pill" id="search-engine-label">Google</span>
+        <div class="module-body">
+          <div class="clock-wrap">
+            <div class="clock-time"><span id="clock-hours">--:--</span><span class="clock-seconds" id="clock-seconds">:--</span></div>
+            <div class="clock-date"><div class="clock-day" id="clock-day">---</div><div id="clock-date">-- --- ----</div></div>
           </div>
-          <div class="search-help">Alt + Espace pour rechercher · tape une URL complète pour l’ouvrir directement</div>
-        </form>
-      </section>
-
-      <section class="module" draggable="false" data-module="network">
-        <div class="module-head"><div class="module-title">réseau</div><div class="drag-handle" title="Déplacer">⠿</div></div>
-        <div class="network-grid">
-          <div class="ip-card"><div class="ip-label">IP publique</div><div class="ip-value" id="public-ip">chargement…</div><div class="ip-status" id="public-ip-status">api.ipify.org</div></div>
-          <div class="ip-card"><div class="ip-label">IP locale (ce poste)</div><div class="ip-value" id="local-ip">détection…</div><div class="ip-status" id="local-ip-status">serveur local / WebRTC</div></div>
         </div>
-        <div style="margin-top:11px"><button type="button" class="ip-refresh" id="refresh-ips">↻ actualiser</button></div>
+        <div class="resize-handle" title="Redimensionner"></div>
       </section>
 
-      <section class="module" draggable="false" data-module="shortcuts">
+      <section class="module" data-module="search">
+        <div class="module-head"><div class="module-title">recherche</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <div class="module-body">
+          <form class="search-wrap" id="search-form">
+            <div class="search-row">
+              <span class="search-symbol">›</span>
+              <input class="search-input" id="search-input" type="text" autocomplete="off" autofocus />
+              <span class="search-engine-pill" id="search-engine-label">Google</span>
+            </div>
+            <div class="search-help">Alt + Espace pour rechercher · tape une URL complète pour l’ouvrir directement</div>
+          </form>
+        </div>
+        <div class="resize-handle" title="Redimensionner"></div>
+      </section>
+
+      <section class="module" data-module="network">
+        <div class="module-head"><div class="module-title">réseau</div><div class="drag-handle" title="Déplacer">⠿</div></div>
+        <div class="module-body">
+          <div class="network-grid">
+            <div class="ip-card"><div class="ip-label">IP publique</div><div class="ip-value" id="public-ip">chargement…</div><div class="ip-status" id="public-ip-status">api.ipify.org</div></div>
+            <div class="ip-card"><div class="ip-label">IP locale (ce poste)</div><div class="ip-value" id="local-ip">détection…</div><div class="ip-status" id="local-ip-status">serveur local / WebRTC</div></div>
+          </div>
+          <div style="margin-top:11px"><button type="button" class="ip-refresh" id="refresh-ips">↻ actualiser</button></div>
+        </div>
+        <div class="resize-handle" title="Redimensionner"></div>
+      </section>
+
+      <section class="module" data-module="shortcuts">
         <div class="module-head"><div class="module-title">raccourcis</div><div class="drag-handle" title="Déplacer">⠿</div></div>
-        <div class="categories" id="shortcut-categories"></div>
+        <div class="module-body">
+          <div class="categories" id="shortcut-categories"></div>
+        </div>
+        <div class="resize-handle" title="Redimensionner"></div>
       </section>
     </main>
   </div>

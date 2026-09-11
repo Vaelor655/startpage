@@ -30,3 +30,14 @@ export const MODULES = [
 ] as const;
 
 export const DEFAULT_MODULE_ORDER = MODULES.map(module => module.id);
+
+/** Position/taille d'un module, en fraction (0-1) de la largeur du tableau de bord pour x/w, en pixels pour y/h. */
+export type ModuleLayout = { xFrac: number; wFrac: number; y: number; h: number | null };
+
+/** y est recalculé au premier lancement (et lors d'une réinitialisation) à partir du rendu réel des modules. */
+export const DEFAULT_MODULE_LAYOUT: Record<string, ModuleLayout> = {
+  clock: { xFrac: 0, wFrac: 1, y: 0, h: null },
+  search: { xFrac: 0, wFrac: 1, y: 0, h: null },
+  network: { xFrac: 0, wFrac: 0.5, y: 0, h: null },
+  shortcuts: { xFrac: 0, wFrac: 1, y: 0, h: null }
+};
