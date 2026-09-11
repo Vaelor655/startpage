@@ -9,7 +9,7 @@ Version personnalisée inspirée de `druxorey/startpage` (GPL-3.0), conservant s
 - Tous les thèmes sombres et clairs du projet d'origine.
 - IP publique via `api.ipify.org`.
 - IP locale : endpoint `/api/client-ip` quand la page est servie avec `npm run start`; tentative WebRTC sinon.
-- Habillage « glass » (verre dépoli) avec image de fond personnalisable (`public/background.png`).
+- Module « portrait » affichant une image personnalisable (`public/portrait.png`).
 - Modules affichables/masquables.
 - Modules librement déplaçables (poignée ⠿) et redimensionnables (coin ↘) avec le bouton `modifier`.
 - Disposition adaptée automatiquement en une colonne sur mobile.
@@ -74,7 +74,7 @@ Le dossier `dist/` peut être servi directement par Nginx après `npm run build`
 
 Les raccourcis par défaut sont dans `src/config.ts`, mais ils sont aussi modifiables directement depuis la page. La configuration personnelle du navigateur prend ensuite le dessus via `localStorage`.
 
-L'image de fond est `public/background.png` (copiée telle quelle dans `dist/` au build). Remplace ce fichier par ta propre image puis relance `npm run build` pour la mettre à jour.
+L'image du module « portrait » est `public/portrait.png` (copiée telle quelle dans `dist/` au build). Remplace ce fichier par ta propre image puis relance `npm run build` pour la mettre à jour.
 
 ## Crédits / licence
 

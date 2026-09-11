@@ -281,6 +281,7 @@ function computeStackedLayout(): Record<string, ModuleLayout> {
   let cursorY = 0;
   dashboard.querySelectorAll<HTMLElement>('.module').forEach(module => {
     const id = module.dataset.module || '';
+    if (id === 'portrait') return; // position/taille fixes par défaut, ne participe pas à l'empilement
     const base = layout[id] || { xFrac: 0, wFrac: 1, y: 0, h: null };
     if (prefs.hiddenModules.includes(id)) { layout[id] = { ...base, y: cursorY, h: null }; return; }
     module.style.position = 'static';
